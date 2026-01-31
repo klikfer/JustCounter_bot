@@ -1,18 +1,579 @@
-# This .gitignore is appropriate for repositories deployed to GitHub Pages and using
-# a Gemfile as specified at https://github.com/github/pages-gem#conventional
-
-# Basic Jekyll gitignores (synchronize to Jekyll.gitignore)
-_site/
-.sass-cache/
-.jekyll-cache/
-.jekyll-metadata
-
-# Additional Ruby/bundler ignore for when you run: bundle install
-/vendor
-
-# Specific ignore for GitHub Pages
-# GitHub Pages will always use its own deployed version of pages-gem 
-# This means GitHub Pages will NOT use your Gemfile.lock and therefore it is
-# counterproductive to check this file into the repository.
-# Details at https://github.com/github/pages-gem/issues/768
-Gemfile.lock
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Счетчик</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .counter-display {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .counter-circle {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 64px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .counter-circle:active {
+            transform: scale(0.95);
+        }
+        
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+        }
+        
+        .btn:active {
+            transform: translateY(2px);
+        }
+        
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .history-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .history-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 20px;
+            color: #667eea;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus,
+        .input-group textarea:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 90%;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Главная страница -->
+        <div id="mainPage" class="page active">
+            <div class="header">
+                <h1>📊 Счетчик</h1>
+                <p>Нажмите на кружок для подсчета</p>
+            </div>
+            
+            <div class="card">
+                <div class="counter-display">
+                    <div class="counter-circle" id="counterCircle">
+                        <span id="counterValue">0</span>
+                    </div>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="saveCounter()">
+                        💾 Сохранить
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetCounter()">
+                        🔄 Сбросить
+                    </button>
+                </div>
+                
+                <button class="btn btn-secondary" onclick="showPage('historyPage')" style="width: 100%; margin-top: 10px;">
+                    📋 История подсчетов
+                </button>
+            </div>
+        </div>
+        
+        <!-- Страница истории -->
+        <div id="historyPage" class="page">
+            <div class="header">
+                <h1>📋 История</h1>
+                <button class="btn btn-secondary" onclick="showPage('mainPage')" style="margin-top: 10px;">
+                    ← Назад
+                </button>
+            </div>
+            
+            <div class="card">
+                <div class="filter-buttons" id="filterButtons">
+                    <button class="filter-btn active" onclick="filterHistory('all')">Все</button>
+                    <button class="filter-btn" onclick="filterHistory('today')">Сегодня</button>
+                    <button class="filter-btn" onclick="filterHistory('yesterday')">Вчера</button>
+                    <button class="filter-btn" onclick="filterHistory('week')">Неделя</button>
+                    <button class="filter-btn" onclick="filterHistory('month')">Месяц</button>
+                </div>
+                
+                <div id="historyList">
+                    <!-- История будет загружена здесь -->
+                </div>
+                
+                <button class="btn btn-danger" onclick="clearHistory()" style="width: 100%; margin-top: 20px;">
+                    🗑️ Очистить всю историю
+                </button>
+            </div>
+        </div>
+        
+        <!-- Модальное окно сохранения -->
+        <div id="saveModal" class="modal">
+            <div class="modal-content">
+                <h2 style="margin-bottom: 20px;">💾 Сохранить результат</h2>
+                
+                <div class="input-group">
+                    <label for="saveTitle">Название *</label>
+                    <input type="text" id="saveTitle" placeholder="Введите название" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="saveDescription">Описание (необязательно)</label>
+                    <textarea id="saveDescription" rows="3" placeholder="Введите описание"></textarea>
+                </div>
+                
+                <div style="color: #666; margin-bottom: 20px;">
+                    Текущий счет: <strong id="modalCounterValue">0</strong>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="confirmSave()" style="flex: 1;">
+                        💾 Сохранить
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        
+        // Инициализация приложения
+        tg.expand();
+        tg.setHeaderColor('#667eea');
+        tg.setBackgroundColor('#667eea');
+        
+        // Переменные
+        let counter = 0;
+        let history = [];
+        
+        // Загрузка данных при старте
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            updateCounterDisplay();
+            loadHistory();
+        });
+        
+        // Управление счетчиком
+        document.getElementById('counterCircle').addEventListener('click', function() {
+            counter++;
+            updateCounterDisplay();
+            saveData();
+        });
+        
+        function updateCounterDisplay() {
+            document.getElementById('counterValue').textContent = counter;
+            document.getElementById('modalCounterValue').textContent = counter;
+        }
+        
+        function resetCounter() {
+            if (counter > 0 && confirm('Сбросить счетчик?')) {
+                counter = 0;
+                updateCounterDisplay();
+                saveData();
+            }
+        }
+        
+        function saveCounter() {
+            if (counter > 0) {
+                document.getElementById('saveModal').style.display = 'flex';
+                document.getElementById('saveTitle').focus();
+            } else {
+                alert('Счет равен нулю!');
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('saveModal').style.display = 'none';
+            document.getElementById('saveTitle').value = '';
+            document.getElementById('saveDescription').value = '';
+        }
+        
+        function confirmSave() {
+            const title = document.getElementById('saveTitle').value.trim();
+            const description = document.getElementById('saveDescription').value.trim();
+            
+            if (!title) {
+                alert('Введите название!');
+                return;
+            }
+            
+            // Добавляем запись в историю
+            const historyItem = {
+                id: Date.now(),
+                title: title,
+                description: description,
+                count: counter,
+                date: new Date().toISOString()
+            };
+            
+            history.unshift(historyItem); // Добавляем в начало
+            saveHistory();
+            
+            // Сбрасываем счетчик
+            counter = 0;
+            updateCounterDisplay();
+            saveData();
+            
+            // Закрываем модальное окно
+            closeModal();
+            
+            // Показываем уведомление
+            showNotification('✅ Сохранено!');
+            
+            // Обновляем историю если на странице истории
+            if (document.getElementById('historyPage').classList.contains('active')) {
+                loadHistory();
+            }
+        }
+        
+        // Управление историей
+        function loadHistory() {
+            const historyList = document.getElementById('historyList');
+            const filteredHistory = getFilteredHistory();
+            
+            if (filteredHistory.length === 0) {
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <p>📭 История пуста</p>
+                        <p style="margin-top: 10px; font-size: 14px;">Сохраните свой первый подсчет!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            filteredHistory.forEach(item => {
+                const date = new Date(item.date);
+                const dateStr = date.toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                html += `
+                    <div class="history-item" data-id="${item.id}">
+                        <div class="history-title">${item.title}</div>
+                        ${item.description ? `<div style="color: #666; margin: 5px 0;">${item.description}</div>` : ''}
+                        <div class="history-meta">
+                            <span>Счет: <strong>${item.count}</strong></span>
+                            <span>${dateStr}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteHistoryItem(${item.id})" style="margin-top: 10px;">
+                            Удалить
+                        </button>
+                    </div>
+                `;
+            });
+            
+            historyList.innerHTML = html;
+        }
+        
+        function getFilteredHistory() {
+            const activeFilter = document.querySelector('.filter-btn.active').textContent.toLowerCase();
+            const now = new Date();
+            
+            return history.filter(item => {
+                const itemDate = new Date(item.date);
+                
+                switch(activeFilter) {
+                    case 'сегодня':
+                        return itemDate.toDateString() === now.toDateString();
+                    case 'вчера':
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        return itemDate.toDateString() === yesterday.toDateString();
+                    case 'неделя':
+                        const weekAgo = new Date();
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        return itemDate >= weekAgo;
+                    case 'месяц':
+                        return itemDate.getMonth() === now.getMonth() && 
+                               itemDate.getFullYear() === now.getFullYear();
+                    default:
+                        return true;
+                }
+            });
+        }
+        
+        function filterHistory(filter) {
+            // Обновляем активную кнопку
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            event.target.classList.add('active');
+            
+            // Загружаем отфильтрованную историю
+            loadHistory();
+        }
+        
+        function deleteHistoryItem(id) {
+            if (confirm('Удалить эту запись?')) {
+                history = history.filter(item => item.id !== id);
+                saveHistory();
+                loadHistory();
+                showNotification('🗑️ Запись удалена');
+            }
+        }
+        
+        function clearHistory() {
+            if (history.length > 0 && confirm('Очистить всю историю? Это действие нельзя отменить.')) {
+                history = [];
+                saveHistory();
+                loadHistory();
+                showNotification('🗑️ История очищена');
+            }
+        }
+        
+        // Навигация
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            
+            // При открытии страницы истории обновляем ее
+            if (pageId === 'historyPage') {
+                loadHistory();
+            }
+        }
+        
+        // Уведомления
+        function showNotification(message) {
+            if (tg.platform !== 'unknown') {
+                tg.showPopup({
+                    title: 'Уведомление',
+                    message: message,
+                    buttons: [{ type: 'ok' }]
+                });
+            } else {
+                alert(message);
+            }
+        }
+        
+        // Работа с localStorage
+        function saveData() {
+            localStorage.setItem('counter', counter);
+        }
+        
+        function loadData() {
+            const savedCounter = localStorage.getItem('counter');
+            if (savedCounter !== null) {
+                counter = parseInt(savedCounter);
+            }
+        }
+        
+        function saveHistory() {
+            localStorage.setItem('counterHistory', JSON.stringify(history));
+        }
+        
+        function loadHistoryData() {
+            const savedHistory = localStorage.getItem('counterHistory');
+            if (savedHistory) {
+                history = JSON.parse(savedHistory);
+            }
+        }
+        
+        // Инициализация истории
+        loadHistoryData();
+        
+        // Для тестирования вне Telegram
+        if (tg.initData === '') {
+            console.log('Запуск вне Telegram');
+        }
+    </script>
+</body>
+</html>
